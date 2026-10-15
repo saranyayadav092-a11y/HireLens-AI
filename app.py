@@ -211,8 +211,8 @@ def apply_style():
         right: 16%; bottom: -145px; border: 1px solid rgba(255,255,255,.22);
         border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.035), 0 0 0 44px rgba(255,255,255,.025);
     }
-    .hero h1 { color: white !important; margin: .2rem 0 .6rem 0; font-size: clamp(2rem, 4.3vw, 3rem); line-height: 1.06; }
-    .hero p { color: #e8eaff !important; margin: 0; max-width: 800px; font-size: 1.02rem; line-height: 1.65; }
+    .hero h1 { color: white !important; text-align: center; margin: .2rem 0 .75rem 0; font-size: clamp(2.15rem, 4.3vw, 3.1rem); line-height: 1.06; font-weight: 800; }
+    .hero p { color: #e8eaff !important; margin: 0 auto; max-width: 800px; font-size: 1.02rem; line-height: 1.65; }
     .eyebrow {
         display: inline-flex; align-items: center; gap: .45rem;
         text-transform: uppercase; letter-spacing: .15em; font-size: .70rem;
@@ -220,7 +220,7 @@ def apply_style():
         border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.10);
         border-radius: 999px; padding: .35rem .7rem;
     }
-    .brandline { color: #dce3ff; font-size: .86rem; font-weight: 700; letter-spacing: .04em; margin-top: 1.05rem; }
+    .brandline { color: #dce3ff; font-size: .78rem; font-weight: 700; letter-spacing: .12em; margin-top: 1.05rem; }
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #171f43 0%, #25255e 56%, #303c79 100%);
         border-right: 1px solid rgba(255,255,255,.12);
