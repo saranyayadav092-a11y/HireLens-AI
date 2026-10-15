@@ -1,5 +1,10 @@
-HireLens AI updated Streamlit app.
+HireLens AI — Hire Recommendation + Opening Splash
 
-Replace your existing app.py with the included app.py. Keep your existing requirements.txt.
+This version keeps the branded 3-second opening splash screen and the Hire Recommendation column beside each candidate name.
 
-Added an explainable AI screening recommendation in candidate details and the results table. It recommends interview review, asks to review must-have gaps, or flags a candidate for human review. It does not make an automatic final hire/no-hire decision.
+To use:
+1. Replace your existing app.py with this app.py.
+2. Keep your existing requirements.txt.
+3. Commit/push the change to GitHub and redeploy/reboot the Streamlit app.
+
+The splash is shown once per Streamlit session. The recommendation is a preliminary resume-screening aid only; review the original resume and make hiring decisions with a human recruiter.
