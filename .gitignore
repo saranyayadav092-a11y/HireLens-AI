@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.streamlit/secrets.toml
+# Never commit candidate resumes or exports
+resumes/
+uploads/
+*.pdf
+*.docx
+*.csv
