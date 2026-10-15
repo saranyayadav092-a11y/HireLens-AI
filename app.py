@@ -5,6 +5,7 @@ from datetime import datetime
 import fitz
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from docx import Document
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -395,48 +396,49 @@ else:
             loading_screen = st.empty()
             # Render the loader in its own HTML component so the CSS and
             # animation are isolated from Streamlit's page styles.
-            loading_screen.components.html(
-                """
-                <!doctype html>
-                <html>
-                <head>
-                  <meta name="viewport" content="width=device-width, initial-scale=1">
-                  <style>
-                    * { box-sizing: border-box; }
-                    body { margin:0; padding:8px 0; font-family:Arial, sans-serif; background:transparent; }
-                    .panel { text-align:center; padding:24px 16px 20px; border-radius:20px;
-                      background:linear-gradient(135deg,#f7f5ff 0%,#eefcff 100%);
-                      border:1px solid #dcd8ff; box-shadow:0 12px 30px rgba(50,45,120,.10); }
-                    .orbit { width:78px; height:78px; margin:0 auto 10px; padding:7px; border-radius:50%;
-                      border:4px solid #dcd8ff; border-top-color:#7054f5; border-right-color:#26b7c7;
-                      animation:spin 1s linear infinite; }
-                    .core { width:56px; height:56px; display:grid; place-items:center; border-radius:50%;
-                      background:#fff; font-size:29px; box-shadow:0 4px 16px #5d52bd22; }
-                    h2 { margin:4px 0 8px; color:#26245f; font-size:27px; letter-spacing:-.7px; }
-                    p { margin:0 auto 15px; color:#535d7a; font-size:14px; line-height:1.5; }
-                    .track { max-width:340px; height:7px; margin:0 auto; overflow:hidden; border-radius:99px; background:#dedff5; }
-                    .fill { height:100%; width:38%; border-radius:99px; background:linear-gradient(90deg,#7054f5,#27b8c7);
-                      animation:slide 1.5s ease-in-out infinite; }
-                    .note { margin-top:12px; color:#818aa5; font-size:12px; }
-                    @keyframes spin { to { transform:rotate(360deg); } }
-                    @keyframes slide { 0% { transform:translateX(-110%); } 100% { transform:translateX(370%); } }
-                    @media (prefers-reduced-motion: reduce) { .orbit,.fill { animation:none; } }
-                  </style>
-                </head>
-                <body>
-                  <div class="panel">
-                    <div class="orbit"><div class="core">🎯</div></div>
-                    <h2>HireLens AI</h2>
-                    <p>Finding relevant skills. Comparing job-related evidence.</p>
-                    <div class="track"><div class="fill"></div></div>
-                    <div class="note">Preparing resumes · Comparing role requirements · Building your shortlist</div>
-                  </div>
-                </body>
-                </html>
-                """,
-                height=245,
-                scrolling=False,
-            )
+            with loading_screen.container():
+                components.html(
+                    """
+                    <!doctype html>
+                    <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <style>
+                        * { box-sizing: border-box; }
+                        body { margin:0; padding:8px 0; font-family:Arial, sans-serif; background:transparent; }
+                        .panel { text-align:center; padding:24px 16px 20px; border-radius:20px;
+                          background:linear-gradient(135deg,#f7f5ff 0%,#eefcff 100%);
+                          border:1px solid #dcd8ff; box-shadow:0 12px 30px rgba(50,45,120,.10); }
+                        .orbit { width:78px; height:78px; margin:0 auto 10px; padding:7px; border-radius:50%;
+                          border:4px solid #dcd8ff; border-top-color:#7054f5; border-right-color:#26b7c7;
+                          animation:spin 1s linear infinite; }
+                        .core { width:56px; height:56px; display:grid; place-items:center; border-radius:50%;
+                          background:#fff; font-size:29px; box-shadow:0 4px 16px #5d52bd22; }
+                        h2 { margin:4px 0 8px; color:#26245f; font-size:27px; letter-spacing:-.7px; }
+                        p { margin:0 auto 15px; color:#535d7a; font-size:14px; line-height:1.5; }
+                        .track { max-width:340px; height:7px; margin:0 auto; overflow:hidden; border-radius:99px; background:#dedff5; }
+                        .fill { height:100%; width:38%; border-radius:99px; background:linear-gradient(90deg,#7054f5,#27b8c7);
+                          animation:slide 1.5s ease-in-out infinite; }
+                        .note { margin-top:12px; color:#818aa5; font-size:12px; }
+                        @keyframes spin { to { transform:rotate(360deg); } }
+                        @keyframes slide { 0% { transform:translateX(-110%); } 100% { transform:translateX(370%); } }
+                        @media (prefers-reduced-motion: reduce) { .orbit,.fill { animation:none; } }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="panel">
+                        <div class="orbit"><div class="core">🎯</div></div>
+                        <h2>HireLens AI</h2>
+                        <p>Finding relevant skills. Comparing job-related evidence.</p>
+                        <div class="track"><div class="fill"></div></div>
+                        <div class="note">Preparing resumes · Comparing role requirements · Building your shortlist</div>
+                      </div>
+                    </body>
+                    </html>
+                    """,
+                    height=245,
+                    scrolling=False,
+                )
             try:
                 with st.spinner("🎯 HireLens AI is analyzing candidate resumes…"):
                     resumes = demo_resumes() if demo_mode else {}
