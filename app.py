@@ -149,6 +149,10 @@ def analyze(job_description, resumes, must_have, preferred, text_weight):
     )
     matrix = vectorizer.fit_transform([job_description] + texts)
     similarities = cosine_similarity(matrix[0:1], matrix[1:]).flatten()
+    # TF-IDF cosine similarity is a raw lexical-overlap value and is often small.
+    # Use a transparent square-root calibration for the overall score component,
+    # while retaining the original raw similarity for the displayed Text relevance.
+    calibrated_relevance = [min(1.0, max(0.0, float(value)) ** 0.5) for value in similarities]
 
     required = set(must_have)
     preferred_set = set(preferred) - required
@@ -161,15 +165,21 @@ def analyze(job_description, resumes, must_have, preferred, text_weight):
         req_coverage = len(req_match) / len(required) if required else None
         pref_coverage = len(pref_match) / len(preferred_set) if preferred_set else None
 
-        # Score blends text relevance, must-have coverage, and preferred skills.
-        # If a criterion group is empty, its weight is redistributed.
-        components = [(text_weight, float(similarities[idx]))]
+        # Explainable weighted score: calibrated document relevance plus skill coverage.
+        # The slider controls the share for job-description relevance. The remaining
+        # weight prioritizes required skills (75%) over preferred skills (25%).
+        # Empty criterion groups are omitted and remaining weights are normalized.
+        components = [(text_weight, calibrated_relevance[idx])]
+        skill_weight = 1.0 - text_weight
         if required:
-            components.append(((1 - text_weight) * (0.75 if preferred_set else 1.0), req_coverage))
+            components.append((skill_weight * (0.75 if preferred_set else 1.0), req_coverage))
         if preferred_set:
-            components.append(((1 - text_weight) * 0.25, pref_coverage))
-        total_weight = sum(w for w, _ in components)
-        score = 100 * sum(w * val for w, val in components) / total_weight if total_weight else 0
+            components.append((skill_weight * 0.25, pref_coverage))
+        total_weight = sum(weight for weight, _ in components)
+        score = (
+            100 * sum(weight * value for weight, value in components) / total_weight
+            if total_weight else 0.0
+        )
 
         # Score-based triage: missing must-have terms are shown as evidence to verify,
         # but they do not automatically disqualify a candidate (resume parsing can miss skills).
@@ -388,7 +398,7 @@ if page == "How it works":
     cols = st.columns(3)
     for col, num, title, desc in zip(cols, ["01", "02", "03"], ["Upload", "Match", "Review"], [
         "Add multiple PDF or DOCX resumes, or load synthetic demo profiles.",
-        "Blend document similarity with must-have and preferred skill coverage.",
+        "Blend calibrated document similarity with must-have and preferred skill coverage.",
         "Inspect the source text and export a shortlist for human review.",
     ]):
         with col:
@@ -523,7 +533,7 @@ else:
             "Must-have coverage", "Preferred coverage",
             "Matching must-haves", "Must-haves to verify",
         ]
-        st.caption("Screening guide: 70%+ = strong match; 45–69.9% = potential match; below 45% = lower match. Missing must-have terms are flagged for verification, not used as an automatic rejection. Scores are preliminary and resume parsing can miss skills.")
+        st.caption("Screening guide: 70%+ = strong match; 45–69.9% = potential match; below 45% = lower match. The overall score uses a square-root calibration of raw TF-IDF relevance plus must-have/preferred skill coverage; raw text relevance remains visible separately. Missing must-have terms are flagged for verification, not used as an automatic rejection. This heuristic is not validated against hiring outcomes.")
         st.dataframe(
             filtered[view_cols],
             use_container_width=True,
