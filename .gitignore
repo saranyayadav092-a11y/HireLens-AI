@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Candidate data and exports — do not commit private resumes
+resumes/
+uploads/
+*.pdf
+*.docx
+*.csv
