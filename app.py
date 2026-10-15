@@ -170,13 +170,17 @@ def analyze(job_description, resumes, must_have, preferred, text_weight):
         total_weight = sum(w for w, _ in components)
         score = 100 * sum(w * val for w, val in components) / total_weight if total_weight else 0
 
-        # Simple, transparent screening flag for the table. This is a review aid,
-        # not an automated employment decision.
-        hire_recommendation = (
-            "RECOMMEND FOR REVIEW"
-            if score >= 70 and not req_missing
-            else "NOT RECOMMENDED YET"
-        )
+        # Score-based triage: missing must-have terms are shown as evidence to verify,
+        # but they do not automatically disqualify a candidate (resume parsing can miss skills).
+        if score >= 70:
+            hire_recommendation = (
+                "STRONG MATCH — REVIEW SKILLS" if req_missing
+                else "STRONG MATCH — REVIEW"
+            )
+        elif score >= 45:
+            hire_recommendation = "POTENTIAL MATCH — REVIEW"
+        else:
+            hire_recommendation = "LOWER MATCH — REVIEW BEFORE DECIDING"
 
         rows.append({
             "Candidate": name,
@@ -518,7 +522,7 @@ else:
             "Must-have coverage", "Preferred coverage",
             "Matching must-haves", "Must-haves to verify",
         ]
-        st.caption("Recommendation rule: RECOMMEND FOR REVIEW = match score ≥ 70 and no listed must-have skills missing. Otherwise: NOT RECOMMENDED YET. This is a preliminary aid only; resume parsing can miss skills.")
+        st.caption("Screening guide: 70%+ = strong match; 45–69.9% = potential match; below 45% = lower match. Missing must-have terms are flagged for verification, not used as an automatic rejection. Scores are preliminary and resume parsing can miss skills.")
         st.dataframe(
             filtered[view_cols],
             use_container_width=True,
@@ -538,10 +542,12 @@ else:
             with left:
                 st.markdown("### Candidate details")
                 st.metric("Document match", f"{row['Match score']:.1f}%")
-                if row["Hire Recommendation"] == "RECOMMEND FOR REVIEW":
-                    st.success("AI suggestion: RECOMMEND FOR REVIEW")
+                if str(row["Hire Recommendation"]).startswith("STRONG MATCH"):
+                    st.success(f"Screening suggestion: {row['Hire Recommendation']}")
+                elif str(row["Hire Recommendation"]).startswith("POTENTIAL MATCH"):
+                    st.info(f"Screening suggestion: {row['Hire Recommendation']}")
                 else:
-                    st.warning("AI suggestion: NOT RECOMMENDED YET")
+                    st.warning(f"Screening suggestion: {row['Hire Recommendation']}")
                 st.caption("This is a preliminary resume-screening flag, not a final hire/reject decision. Verify the original resume and interview evidence.")
                 st.write("**Matching must-have skills**")
                 st.write(row["Matching must-haves"])
