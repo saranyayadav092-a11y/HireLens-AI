@@ -1,4 +1,5 @@
 import re
+import time
 from io import BytesIO
 from datetime import datetime
 
@@ -15,6 +16,53 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# One-time branded opening splash: shown when a visitor first opens the app.
+# This is separate from the resume-analysis progress indicator.
+if "hirelens_intro_shown" not in st.session_state:
+    st.session_state["hirelens_intro_shown"] = True
+    splash = st.empty()
+    splash.markdown(
+        """
+        <style>
+        .hl-splash {
+          position: fixed; inset: 0; z-index: 999999;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          text-align: center; background: radial-gradient(circle at 50% 35%, #24205d 0%, #11142d 48%, #090d1b 100%);
+          color: #fff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+          animation: hl-fade-in .35s ease-out both;
+        }
+        .hl-logo { width: 86px; height: 86px; display: grid; place-items: center;
+          border-radius: 25px; font-size: 43px; margin-bottom: 20px;
+          background: linear-gradient(135deg, #7965ff, #2bc9d2);
+          box-shadow: 0 0 55px #7666ff55; animation: hl-float 1.5s ease-in-out infinite; }
+        .hl-title { font-size: clamp(34px, 5vw, 54px); line-height: 1.05; font-weight: 800;
+          letter-spacing: -1.8px; margin: 0; }
+        .hl-title span { background: linear-gradient(90deg,#a99bff,#79edf0);
+          -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .hl-tagline { margin: 14px 0 27px; color: #c6cbe3; font-size: 15px; letter-spacing: .3px; }
+        .hl-loader { width: 180px; height: 4px; overflow: hidden; border-radius: 10px; background: #343858; }
+        .hl-loader:after { content: ''; display: block; width: 42%; height: 100%; border-radius: inherit;
+          background: linear-gradient(90deg,#8270ff,#52e1e5); animation: hl-progress 1s ease-in-out infinite; }
+        .hl-caption { margin-top: 13px; font-size: 11px; color: #8e96bb; letter-spacing: 2px; text-transform: uppercase; }
+        @keyframes hl-progress { from { transform: translateX(-110%); } to { transform: translateX(350%); } }
+        @keyframes hl-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes hl-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { .hl-logo, .hl-loader:after { animation: none; } }
+        </style>
+        <div class="hl-splash">
+          <div class="hl-logo">🎯</div>
+          <h1 class="hl-title">HireLens <span>AI</span></h1>
+          <p class="hl-tagline">See the fit. Make the call.</p>
+          <div class="hl-loader"></div>
+          <div class="hl-caption">Preparing your workspace</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    time.sleep(3)
+    splash.empty()
+
 
 SKILL_ALIASES = {
     "python": ["python"], "java": ["java"], "c++": ["c++"], "c#": ["c#"],
@@ -122,21 +170,17 @@ def analyze(job_description, resumes, must_have, preferred, text_weight):
         total_weight = sum(w for w, _ in components)
         score = 100 * sum(w * val for w, val in components) / total_weight if total_weight else 0
 
-        # Explainable triage guidance only; not an automated hiring decision.
-        if req_missing:
-            recommendation = "Review gaps before proceeding"
-            recommendation_reason = "One or more must-have skills were not detected; verify the resume because parsing or wording can miss skills."
-        elif score >= 70:
-            recommendation = "Recommend for interview review"
-            recommendation_reason = "Strong document overlap and all listed must-have skills were detected. Verify experience and evidence in an interview."
-        else:
-            recommendation = "Needs human review"
-            recommendation_reason = "The document match is below the suggested review threshold; inspect relevant experience and resume evidence before deciding."
+        # Simple, transparent screening flag for the table. This is a review aid,
+        # not an automated employment decision.
+        hire_recommendation = (
+            "RECOMMEND FOR REVIEW"
+            if score >= 70 and not req_missing
+            else "NOT RECOMMENDED YET"
+        )
 
         rows.append({
             "Candidate": name,
-            "AI recommendation": recommendation,
-            "Recommendation rationale": recommendation_reason,
+            "Hire Recommendation": hire_recommendation,
             "Match score": round(float(score), 1),
             "Text relevance": round(float(similarities[idx]) * 100, 1),
             "Must-have coverage": round(req_coverage * 100, 1) if req_coverage is not None else None,
@@ -470,10 +514,11 @@ else:
             filtered = filtered.sort_values(sort_by, ascending=False, na_position="last")
 
         view_cols = [
-            "Candidate", "AI recommendation", "Match score", "Text relevance",
+            "Candidate", "Hire Recommendation", "Match score", "Text relevance",
             "Must-have coverage", "Preferred coverage",
             "Matching must-haves", "Must-haves to verify",
         ]
+        st.caption("Recommendation rule: RECOMMEND FOR REVIEW = match score ≥ 70 and no listed must-have skills missing. Otherwise: NOT RECOMMENDED YET. This is a preliminary aid only; resume parsing can miss skills.")
         st.dataframe(
             filtered[view_cols],
             use_container_width=True,
@@ -493,17 +538,11 @@ else:
             with left:
                 st.markdown("### Candidate details")
                 st.metric("Document match", f"{row['Match score']:.1f}%")
-                st.caption("Document relevance only — not a probability of job success.")
-                st.markdown("### 🤖 AI screening recommendation")
-                recommendation = row["AI recommendation"]
-                if recommendation == "Recommend for interview review":
-                    st.success(recommendation)
-                elif recommendation == "Review gaps before proceeding":
-                    st.warning(recommendation)
+                if row["Hire Recommendation"] == "RECOMMEND FOR REVIEW":
+                    st.success("AI suggestion: RECOMMEND FOR REVIEW")
                 else:
-                    st.info(recommendation)
-                st.write(row["Recommendation rationale"])
-                st.caption("This is explainable triage guidance, not a final hire/no-hire decision. A human reviewer must verify the original resume and assess the candidate fairly.")
+                    st.warning("AI suggestion: NOT RECOMMENDED YET")
+                st.caption("This is a preliminary resume-screening flag, not a final hire/reject decision. Verify the original resume and interview evidence.")
                 st.write("**Matching must-have skills**")
                 st.write(row["Matching must-haves"])
                 st.write("**Must-have skills to verify**")
@@ -527,7 +566,7 @@ else:
             mime="text/csv",
             use_container_width=True,
         )
-        st.info("AI recommendations are decision-support only. Do not auto-reject candidates: resume parsing or wording may hide relevant skills. Verify evidence and make the final decision through a structured, job-related human review.")
+        st.info("Use scores to prioritize review, not to auto-reject. A missing skill can reflect parsing or wording limitations, so verify the original resume.")
 
 
 st.markdown("""
