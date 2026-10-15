@@ -268,6 +268,10 @@ def apply_style():
     }
     div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
     [data-testid="stAlert"] { border-radius: 14px; }
+    [data-testid="stStatusWidget"] { border-radius: 16px; }
+    [data-testid="stSpinner"] { background: linear-gradient(110deg, rgba(102,84,232,.08), rgba(37,174,191,.10)); border: 1px solid rgba(114,87,245,.18); border-radius: 16px; padding: 1rem 1.2rem; }
+    [data-testid="stSpinner"] p { color: #4338a8 !important; font-weight: 750; }
+
     .section-kicker { color: #7257f5; font-size: .72rem; text-transform: uppercase; letter-spacing: .13em; font-weight: 800; }
     .footer {
         margin-top: 3rem; padding: 1.35rem 1.5rem; border-radius: 20px;
@@ -328,7 +332,7 @@ elif page == "Responsible AI":
     """)
     st.warning("A production system needs authentication, access controls, secure storage, retention/deletion policies, evaluation, and legal review.")
 else:
-    st.markdown('<div class="hero"><div class="eyebrow">AI-assisted talent discovery</div><h1>Find the fit. Explain the match.</h1><p>Screen resumes with flexible criteria, compare skills, and export a shortlist—without handing the final decision to an algorithm.</p><div class="brandline">✦ SMART MATCHING, WITH THE RECRUITER IN CONTROL</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="eyebrow">✦ AI-ASSISTED TALENT DISCOVERY</div><h1>🎯 HireLens AI</h1><p>Find the fit. Explain the match. Screen resumes with flexible criteria, compare skills, and build a reviewable shortlist—with the recruiter in control.</p><div class="brandline">✦ SMART MATCHING &nbsp; · &nbsp; CLEAR EVIDENCE &nbsp; · &nbsp; HUMAN-LED HIRING</div></div>', unsafe_allow_html=True)
 
     with st.form("screening_form", clear_on_submit=False):
         a, b = st.columns([1.05, .95], gap="large")
@@ -398,7 +402,7 @@ else:
                 try:
                     must = parse_skill_list(must_text)
                     preferred = parse_skill_list(preferred_text)
-                    with st.spinner("Analyzing resumes…"):
+                    with st.spinner("✨ HireLens AI is reviewing resumes and comparing job-related evidence…"):
                         results = analyze(job_description, resumes, must, preferred, text_weight_pct / 100)
                     st.session_state["results"] = results
                     st.session_state["resume_texts"] = resumes
@@ -491,15 +495,16 @@ else:
 
 
 st.markdown("""
-<div class="footer">
-  <div class="footer-title">🎯 HireLens AI <span style="color:#7de7ed">·</span> Talent discovery, made clearer.</div>
-  <div class="footer-copy">A hackathon MVP for explainable resume matching. Scores are only a review aid—not a hiring decision or a prediction of job performance.</div>
-  <div style="margin-top:.7rem">
-    <span class="footer-pill">Python</span>
-    <span class="footer-pill">Streamlit</span>
-    <span class="footer-pill">TF-IDF matching</span>
-    <span class="footer-pill">Human-first hiring</span>
+<div class="footer" style="text-align:center">
+  <div style="font-size:1.8rem;margin-bottom:.25rem">🎯</div>
+  <div class="footer-title" style="font-size:1.3rem">HireLens AI <span style="color:#7de7ed">·</span> See the fit. Make the call.</div>
+  <div class="footer-copy" style="max-width:760px;margin:.55rem auto 0">Thoughtful resume matching starts with clear evidence. Use every score as a guide for human review—not as an automatic hiring decision.</div>
+  <div style="margin-top:.9rem">
+    <span class="footer-pill">✦ Explainable matching</span>
+    <span class="footer-pill">◈ Skills evidence</span>
+    <span class="footer-pill">♡ Human-first hiring</span>
+    <span class="footer-pill">🔒 Candidate privacy</span>
   </div>
-  <div class="footer-copy" style="margin-top:.8rem">Built for thoughtful screening · Protect candidate privacy · Always verify the original resume</div>
+  <div class="footer-copy" style="margin-top:1rem">Review fairly · Protect candidate data · Verify the original resume</div>
 </div>
 """, unsafe_allow_html=True)
