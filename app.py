@@ -2,6 +2,7 @@ import re
 import time
 from io import BytesIO
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import fitz
 import pandas as pd
@@ -75,10 +76,9 @@ SKILL_ALIASES = {
     "css": ["css"], "javascript": ["javascript"], "typescript": ["typescript"],
     "react": ["react", "react.js"], "node.js": ["node.js", "nodejs"],
     "django": ["django"], "flask": ["flask"], "streamlit": ["streamlit"],
-    "git": ["git", "github", "gitlab"], "debugging": ["debugging", "debug", "troubleshooting"],
-    "teamwork": ["teamwork", "team player", "collaboration"], "aws": ["aws", "amazon web services"],
+    "git": ["git", "github", "gitlab"], "aws": ["aws", "amazon web services"],
     "azure": ["azure", "microsoft azure"], "docker": ["docker"],
-    "kubernetes": ["kubernetes"], "rest api": ["rest api", "restful api", "rest apis", "restful apis"],
+    "kubernetes": ["kubernetes"], "rest api": ["rest api", "restful api"],
     "communication": ["communication", "verbal communication"],
     "project management": ["project management"],
     "leadership": ["leadership", "team leadership"],
@@ -161,23 +161,13 @@ def analyze(job_description, resumes, must_have, preferred, text_weight):
         req_coverage = len(req_match) / len(required) if required else None
         pref_coverage = len(pref_match) / len(preferred_set) if preferred_set else None
 
-        # Raw TF-IDF cosine similarities are usually small (often below 0.20),
-        # so using them directly as a percentage unfairly drags down the total.
-        # Convert the similarity to a capped relevance component for the blended
-        # score; keep the original cosine-derived percentage visible separately.
-        text_relevance_score = min(float(similarities[idx]) / 0.20, 1.0)
-
-        # The slider controls the text component. Remaining weight prioritizes
-        # required skills, with a smaller contribution from preferred skills.
-        components = [(text_weight, text_relevance_score)]
-        remaining_weight = 1 - text_weight
-        if required and preferred_set:
-            components.append((remaining_weight * 0.75, req_coverage))
-            components.append((remaining_weight * 0.25, pref_coverage))
-        elif required:
-            components.append((remaining_weight, req_coverage))
-        elif preferred_set:
-            components.append((remaining_weight, pref_coverage))
+        # Score blends text relevance, must-have coverage, and preferred skills.
+        # If a criterion group is empty, its weight is redistributed.
+        components = [(text_weight, float(similarities[idx]))]
+        if required:
+            components.append(((1 - text_weight) * (0.75 if preferred_set else 1.0), req_coverage))
+        if preferred_set:
+            components.append(((1 - text_weight) * 0.25, pref_coverage))
         total_weight = sum(w for w, _ in components)
         score = 100 * sum(w * val for w, val in components) / total_weight if total_weight else 0
 
@@ -489,7 +479,7 @@ else:
                         st.session_state["results"] = results
                         st.session_state["resume_texts"] = resumes
                         st.session_state["role_name"] = role_name.strip() or "Untitled role"
-                        st.session_state["run_time"] = datetime.now().strftime("%d %b %Y, %H:%M")
+                        st.session_state["run_time"] = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y, %H:%M IST")
                     for error in errors:
                         st.warning(error)
                 analysis_status.update(label="✅ HireLens AI analysis complete", state="complete", expanded=False)
@@ -533,7 +523,7 @@ else:
             "Must-have coverage", "Preferred coverage",
             "Matching must-haves", "Must-haves to verify",
         ]
-        st.caption("Screening guide: 70%+ = strong match; 45–69.9% = potential match; below 45% = lower match. Match score uses a capped TF-IDF relevance component plus skill coverage; Text relevance shows the raw cosine similarity percentage. Missing skills are flagged for verification, not automatic rejection. Scores are preliminary.")
+        st.caption("Screening guide: 70%+ = strong match; 45–69.9% = potential match; below 45% = lower match. Missing must-have terms are flagged for verification, not used as an automatic rejection. Scores are preliminary and resume parsing can miss skills.")
         st.dataframe(
             filtered[view_cols],
             use_container_width=True,
