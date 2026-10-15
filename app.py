@@ -389,60 +389,57 @@ else:
         if not job_description.strip():
             st.error("Please enter a job description.")
         else:
-            # Keep the branded loader visible across extraction AND matching,
-            # not just the final similarity calculation.
-            with st.status("🎯 HireLens AI is preparing your screening...", expanded=True) as progress:
-                st.markdown(
-                    """
-                    <div class="loader-card">
-                      <div class="loader-orbit"><div class="loader-core">🎯</div></div>
-                      <div class="loader-heading">HireLens AI</div>
-                      <div class="loader-subtitle">Finding relevant skills. Comparing job-related evidence.</div>
-                      <div class="loader-track"><div class="loader-track-fill"></div></div>
-                      <div class="loader-note">Please keep this page open while we analyze the resumes.</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                progress.write("Step 1 of 3 · Preparing candidate documents")
-                resumes = demo_resumes() if demo_mode else {}
-                errors = []
-                for file in uploads or []:
-                    try:
-                        extracted = extract_text(file)
-                        if not extracted.strip():
-                            errors.append(f"{file.name}: no readable text found; scanned PDFs may need OCR.")
-                            continue
-                        filename = file.name
-                        suffix = 2
-                        while filename in resumes:
-                            filename = f"{suffix}_{file.name}"
-                            suffix += 1
-                        resumes[filename] = extracted
-                    except Exception as exc:
-                        errors.append(f"{file.name}: could not read ({type(exc).__name__}).")
+            # A placeholder is used instead of st.status so the branded loader
+            # works on a wider range of Streamlit versions and remains visible
+            # for the entire extraction + analysis operation.
+            loading_screen = st.empty()
+            loading_screen.markdown(
+                """
+                <div class="loader-card">
+                  <div class="loader-orbit"><div class="loader-core">🎯</div></div>
+                  <div class="loader-heading">HireLens AI</div>
+                  <div class="loader-subtitle">Finding relevant skills. Comparing job-related evidence.</div>
+                  <div class="loader-track"><div class="loader-track-fill"></div></div>
+                  <div class="loader-note">Preparing resumes · Comparing role requirements · Building your shortlist</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            try:
+                with st.spinner("🎯 HireLens AI is analyzing candidate resumes…"):
+                    resumes = demo_resumes() if demo_mode else {}
+                    errors = []
+                    for file in uploads or []:
+                        try:
+                            extracted = extract_text(file)
+                            if not extracted.strip():
+                                errors.append(f"{file.name}: no readable text found; scanned PDFs may need OCR.")
+                                continue
+                            filename = file.name
+                            suffix = 2
+                            while filename in resumes:
+                                filename = f"{suffix}_{file.name}"
+                                suffix += 1
+                            resumes[filename] = extracted
+                        except Exception as exc:
+                            errors.append(f"{file.name}: could not read ({type(exc).__name__}).")
 
-                for error in errors:
-                    st.warning(error)
-
-                if not resumes:
-                    progress.update(label="HireLens AI needs a readable resume", state="error", expanded=True)
-                    st.error("Upload at least one readable resume or enable fictional demo resumes in the sidebar.")
-                else:
-                    try:
-                        progress.write("Step 2 of 3 · Comparing skills and job-description relevance")
+                    if not resumes:
+                        st.error("Upload at least one readable resume or enable fictional demo resumes in the sidebar.")
+                    else:
                         must = parse_skill_list(must_text)
                         preferred = parse_skill_list(preferred_text)
                         results = analyze(job_description, resumes, must, preferred, text_weight_pct / 100)
-                        progress.write("Step 3 of 3 · Preparing your reviewable shortlist")
                         st.session_state["results"] = results
                         st.session_state["resume_texts"] = resumes
                         st.session_state["role_name"] = role_name.strip() or "Untitled role"
                         st.session_state["run_time"] = datetime.now().strftime("%d %b %Y, %H:%M")
-                        progress.update(label="🎉 HireLens AI analysis complete", state="complete", expanded=False)
-                    except ValueError:
-                        progress.update(label="HireLens AI could not complete the comparison", state="error", expanded=True)
-                        st.error("Could not compare the supplied text. Try a longer job description and readable resumes.")
+                    for error in errors:
+                        st.warning(error)
+            except ValueError:
+                st.error("Could not compare the supplied text. Try a longer job description and readable resumes.")
+            finally:
+                loading_screen.empty()
 
     if "results" in st.session_state:
         results = st.session_state["results"].copy()
