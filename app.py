@@ -271,6 +271,19 @@ def apply_style():
     [data-testid="stStatusWidget"] { border-radius: 16px; }
     [data-testid="stSpinner"] { background: linear-gradient(110deg, rgba(102,84,232,.08), rgba(37,174,191,.10)); border: 1px solid rgba(114,87,245,.18); border-radius: 16px; padding: 1rem 1.2rem; }
     [data-testid="stSpinner"] p { color: #4338a8 !important; font-weight: 750; }
+    [data-testid="stStatus"] { border: 1px solid rgba(114,87,245,.28); border-radius: 18px; overflow: hidden; box-shadow: 0 12px 35px rgba(50,49,120,.10); }
+    [data-testid="stStatus"] > details > summary { background: linear-gradient(100deg, #24265d, #6650d9 68%, #24aebd); color: #fff !important; font-weight: 800; padding: 1rem 1.2rem; }
+    .loader-card { text-align:center; margin:.3rem 0 .5rem; padding:1.4rem 1rem 1.2rem; border-radius:18px; background:linear-gradient(135deg,#f8f7ff,#f0fbff); border:1px solid rgba(114,87,245,.16); }
+    .loader-orbit { width:76px; height:76px; margin:0 auto .65rem; display:grid; place-items:center; border-radius:50%; border:3px solid #d9d5ff; border-top-color:#7257f5; border-right-color:#35c9d6; animation:hirelens-spin 1s linear infinite; }
+    .loader-core { width:55px; height:55px; display:grid; place-items:center; border-radius:50%; background:white; font-size:1.8rem; box-shadow:0 5px 18px rgba(73,65,170,.12); }
+    .loader-heading { color:#25265f; font-family:'Space Grotesk',sans-serif; font-size:1.55rem; font-weight:800; letter-spacing:-.03em; }
+    .loader-subtitle { color:#58627f; font-size:.92rem; margin:.35rem 0 .9rem; }
+    .loader-track { max-width:340px; height:6px; margin:0 auto; border-radius:99px; background:#dedff5; overflow:hidden; }
+    .loader-track-fill { height:100%; width:42%; border-radius:99px; background:linear-gradient(90deg,#7257f5,#35c9d6); animation:hirelens-progress 1.6s ease-in-out infinite; }
+    .loader-note { color:#8a91a8; font-size:.75rem; margin-top:.75rem; }
+    @keyframes hirelens-spin { to { transform:rotate(360deg); } }
+    @keyframes hirelens-progress { 0% { transform:translateX(-120%); } 100% { transform:translateX(360%); } }
+
 
     .section-kicker { color: #7257f5; font-size: .72rem; text-transform: uppercase; letter-spacing: .13em; font-weight: 800; }
     .footer {
@@ -376,40 +389,60 @@ else:
         if not job_description.strip():
             st.error("Please enter a job description.")
         else:
-            resumes = demo_resumes() if demo_mode else {}
-            errors = []
-            for file in uploads or []:
-                try:
-                    extracted = extract_text(file)
-                    if not extracted.strip():
-                        errors.append(f"{file.name}: no readable text found; scanned PDFs may need OCR.")
-                        continue
-                    filename = file.name
-                    suffix = 2
-                    while filename in resumes:
-                        filename = f"{suffix}_{file.name}"
-                        suffix += 1
-                    resumes[filename] = extracted
-                except Exception as exc:
-                    errors.append(f"{file.name}: could not read ({type(exc).__name__}).")
+            # Keep the branded loader visible across extraction AND matching,
+            # not just the final similarity calculation.
+            with st.status("🎯 HireLens AI is preparing your screening...", expanded=True) as progress:
+                st.markdown(
+                    """
+                    <div class="loader-card">
+                      <div class="loader-orbit"><div class="loader-core">🎯</div></div>
+                      <div class="loader-heading">HireLens AI</div>
+                      <div class="loader-subtitle">Finding relevant skills. Comparing job-related evidence.</div>
+                      <div class="loader-track"><div class="loader-track-fill"></div></div>
+                      <div class="loader-note">Please keep this page open while we analyze the resumes.</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                progress.write("Step 1 of 3 · Preparing candidate documents")
+                resumes = demo_resumes() if demo_mode else {}
+                errors = []
+                for file in uploads or []:
+                    try:
+                        extracted = extract_text(file)
+                        if not extracted.strip():
+                            errors.append(f"{file.name}: no readable text found; scanned PDFs may need OCR.")
+                            continue
+                        filename = file.name
+                        suffix = 2
+                        while filename in resumes:
+                            filename = f"{suffix}_{file.name}"
+                            suffix += 1
+                        resumes[filename] = extracted
+                    except Exception as exc:
+                        errors.append(f"{file.name}: could not read ({type(exc).__name__}).")
 
-            for error in errors:
-                st.warning(error)
+                for error in errors:
+                    st.warning(error)
 
-            if not resumes:
-                st.error("Upload at least one readable resume or enable fictional demo resumes in the sidebar.")
-            else:
-                try:
-                    must = parse_skill_list(must_text)
-                    preferred = parse_skill_list(preferred_text)
-                    with st.spinner("✨ HireLens AI is reviewing resumes and comparing job-related evidence…"):
+                if not resumes:
+                    progress.update(label="HireLens AI needs a readable resume", state="error", expanded=True)
+                    st.error("Upload at least one readable resume or enable fictional demo resumes in the sidebar.")
+                else:
+                    try:
+                        progress.write("Step 2 of 3 · Comparing skills and job-description relevance")
+                        must = parse_skill_list(must_text)
+                        preferred = parse_skill_list(preferred_text)
                         results = analyze(job_description, resumes, must, preferred, text_weight_pct / 100)
-                    st.session_state["results"] = results
-                    st.session_state["resume_texts"] = resumes
-                    st.session_state["role_name"] = role_name.strip() or "Untitled role"
-                    st.session_state["run_time"] = datetime.now().strftime("%d %b %Y, %H:%M")
-                except ValueError:
-                    st.error("Could not compare the supplied text. Try a longer job description and readable resumes.")
+                        progress.write("Step 3 of 3 · Preparing your reviewable shortlist")
+                        st.session_state["results"] = results
+                        st.session_state["resume_texts"] = resumes
+                        st.session_state["role_name"] = role_name.strip() or "Untitled role"
+                        st.session_state["run_time"] = datetime.now().strftime("%d %b %Y, %H:%M")
+                        progress.update(label="🎉 HireLens AI analysis complete", state="complete", expanded=False)
+                    except ValueError:
+                        progress.update(label="HireLens AI could not complete the comparison", state="error", expanded=True)
+                        st.error("Could not compare the supplied text. Try a longer job description and readable resumes.")
 
     if "results" in st.session_state:
         results = st.session_state["results"].copy()
